@@ -1,0 +1,56 @@
+-- LocalScript: Optimized Slow Fall (-35 studs/s) (Disaster Island Survival)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+game:GetService("StarterGui"):SetCore("SendNotification", {
+	Title = "Slow Fall (Tối ưu)",
+	Text = "Đã chỉnh: Rơi nhanh hơn xíu nữa (Tốc độ -35)!",
+	Duration = 4
+})
+
+-- Tốc độ rơi hãm ở mức -35 studs/s
+local TARGET_FALL_SPEED = -35 
+
+local function applySlowFall(character)
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if not hrp or not humanoid then return end
+
+	local bodyVelocity = hrp:FindFirstChild("SlowFallVelocity") or Instance.new("BodyVelocity")
+	bodyVelocity.Name = "SlowFallVelocity"
+	bodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+	bodyVelocity.Velocity = Vector3.new(0, TARGET_FALL_SPEED, 0)
+	bodyVelocity.Parent = hrp
+
+	-- Vô hiệu hóa trạng thái té ngã / sát thương rơi
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+
+	local connection
+	connection = RunService.Heartbeat:Connect(function()
+		if not character or not character.Parent or humanoid.Health <= 0 then
+			connection:Disconnect()
+			return
+		end
+
+		local state = humanoid:GetState()
+
+		-- Kích hoạt hãm lực khi vận tốc rơi vượt quá mức -35 studs/s
+		if state == Enum.HumanoidStateType.Freefall and hrp.AssemblyLinearVelocity.Y < TARGET_FALL_SPEED then
+			bodyVelocity.MaxForce = Vector3.new(0, 35000, 0)
+			bodyVelocity.Velocity = Vector3.new(0, TARGET_FALL_SPEED, 0)
+		else
+			bodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+		end
+	end)
+end
+
+-- Kích hoạt ngay và tự động tái tạo khi hồi sinh
+if LocalPlayer.Character then
+	applySlowFall(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+	task.wait(0.5)
+	applySlowFall(newChar)
+end)
